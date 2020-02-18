@@ -5,8 +5,8 @@
     TWITCH_CLIENT_SECRET=
     TWITCH_CLIENT_TOKEN=
 
-#### Generate Token
--   You can generate a simple token by using ***get_token*** function 
+### Generate Token
+- > cargo run token
 
 ### Get User by id
-- >   cargon run user=53380605
+- > cargon run user=53380605

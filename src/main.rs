@@ -6,7 +6,7 @@ use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use std::env;
 
-
+#[derive(Debug)]
 struct Cli {
     msg: String,
     params: Vec<String>,
@@ -83,6 +83,10 @@ async fn main() -> Result<(), reqwest::Error>  {
                 let uid: u32 = full_param[1].parse().unwrap();
                 let user = cli.get_user(uid).await?;
                 println!("{:?}", &user);
+            },
+            "token" => {
+                let token = cli.get_token().await?;
+                println!("{}", &token);
             },
             _      => {}
         };
