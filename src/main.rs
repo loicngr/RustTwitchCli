@@ -57,9 +57,6 @@ impl Cli {
     }
 }
 
-
-
-
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error>  {
     dotenv().ok();
@@ -67,6 +64,7 @@ async fn main() -> Result<(), reqwest::Error>  {
     let mut twitch_client_secret = String::new();
     let mut twitch_client_token = String::new();
 
+    // TODO : optimise this loop for get env params
     for (key, value) in env::vars() {
         if key == "TWITCH_CLIENT_ID" { twitch_client_id = String::from(value) }
         else if key == "TWITCH_CLIENT_SECRET" { twitch_client_secret = String::from(value) }
@@ -79,7 +77,7 @@ async fn main() -> Result<(), reqwest::Error>  {
     for param in &cli.params {
         let full_param: Vec<&str> = param.split("=").collect();
         match full_param[0] {
-            "user" => {
+            "user"  => {
                 let uid: u32 = full_param[1].parse().unwrap();
                 let user = cli.get_user(uid).await?;
                 println!("{:?}", &user);
@@ -88,9 +86,14 @@ async fn main() -> Result<(), reqwest::Error>  {
                 let token = cli.get_token().await?;
                 println!("{}", &token);
             },
-            _      => {}
+            "help"  => {
+                println!("Please, see the readme file for help.");
+            },
+            _       => { }
         };
     }
+
+    if cli.params.len() <= 1 { println!("Don't forget to give me some parameters.."); }
 
     Ok(())
 }
