@@ -69,7 +69,7 @@ impl Cli {
         let stream: Vec<Stream> = serde_json::from_str(&data).unwrap();
         Ok(stream)
     }
-    async fn get_uid( &self, login: String ) -> Result<Vec<User>, reqwest::Error> {
+    async fn get_user_by_login( &self, login: String ) -> Result<Vec<User>, reqwest::Error> {
         let client = reqwest::Client::new();
         let resp = client.get(format!("https://api.twitch.tv/helix/users?login={}", &login).as_str())
             .bearer_auth(self.twitch_client_token.as_str())
@@ -96,16 +96,9 @@ impl Cli {
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error>  {
     dotenv().ok();
-    let mut twitch_client_id = String::new();
-    let mut twitch_client_secret = String::new();
-    let mut twitch_client_token = String::new();
-
-    // TODO : optimise this loop for get env params
-    for (key, value) in env::vars() {
-        if key == "TWITCH_CLIENT_ID" { twitch_client_id = String::from(value) }
-        else if key == "TWITCH_CLIENT_SECRET" { twitch_client_secret = String::from(value) }
-        else if key == "TWITCH_CLIENT_TOKEN" { twitch_client_token = String::from(value) }
-    }
+    let twitch_client_id = dotenv::var("TWITCH_CLIENT_ID").unwrap();
+    let twitch_client_secret = dotenv::var("TWITCH_CLIENT_SECRET").unwrap();
+    let twitch_client_token = dotenv::var("TWITCH_CLIENT_TOKEN").unwrap();
 
     let args: Vec<String> = env::args().collect();
     let cli = Cli { msg: String::from(args[0].trim()), params: args, twitch_client_id, twitch_client_secret, twitch_client_token };
@@ -129,8 +122,8 @@ async fn main() -> Result<(), reqwest::Error>  {
             },
             "uid"           => {
                 let login: String = full_param[1].parse().unwrap();
-                let mut user: Vec<User> = cli.get_uid(login).await?;
-                let uid: &mut User = user.first_mut().unwrap();
+                let user: Vec<User> = cli.get_user_by_login(login).await?;
+                let uid: &User = user.first().unwrap();
                 println!("{:?}", &uid.id);
             },
             "help"          => {
