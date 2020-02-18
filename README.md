@@ -7,8 +7,12 @@
 
 ### Generate Token
 - > cargo run token
-- > ./target/release/twitch-cli token
 
 ### Get User by id
-- > cargon run user=53380605
-- > ./target/release/twitch-cli user=53380605
+- > cargon run info-user=53380605
+
+### Get user Stream by id
+- > cargo run isonlive-user=147337430
+
+### Get an user id by user login
+- > cargo run uid=username

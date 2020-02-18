@@ -15,7 +15,7 @@ struct Cli {
     twitch_client_token: String
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct User {
     id: String,
     login: String,
@@ -27,6 +27,21 @@ struct User {
     view_count: u32,
     offline_image_url: String,
     profile_image_url: String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Stream {
+    id: String,
+    user_id: String,
+    user_name: String,
+    game_id: String,
+    #[serde(rename = "type")]
+    user_type: String,
+    title: String,
+    viewer_count: u32,
+    started_at: String,
+    language: String,
+    thumbnail_url: String
 }
 
 impl Cli {
@@ -43,6 +58,27 @@ impl Cli {
         let data = deserialized.get("data").unwrap();
         let serialized = serde_json::to_string(&data).unwrap();
         Ok(serialized)
+    }
+    async fn get_stream_user( &self, uid: u32 ) -> Result<Vec<Stream>, reqwest::Error> {
+        let client = reqwest::Client::new();
+        let resp = client.get(format!("https://api.twitch.tv/helix/streams?user_id={}", &uid).as_str())
+                .header("Client-ID", self.twitch_client_id.as_str())
+                .send().await?;
+        let text = resp.text().await?;
+        let data = self.remove_data_scope(&text.as_str()).unwrap();
+        let stream: Vec<Stream> = serde_json::from_str(&data).unwrap();
+        Ok(stream)
+    }
+    async fn get_uid( &self, login: String ) -> Result<Vec<User>, reqwest::Error> {
+        let client = reqwest::Client::new();
+        let resp = client.get(format!("https://api.twitch.tv/helix/users?login={}", &login).as_str())
+            .bearer_auth(self.twitch_client_token.as_str())
+            .send().await?;
+    
+        let text = resp.text().await?;
+        let data = self.remove_data_scope(&text.as_str()).unwrap();
+        let user: Vec<User> = serde_json::from_str(&data).unwrap();
+        Ok(user)
     }
     async fn get_user( &self, uid: u32 ) -> Result<Vec<User>, reqwest::Error> {    
         let client = reqwest::Client::new();
@@ -77,19 +113,30 @@ async fn main() -> Result<(), reqwest::Error>  {
     for param in &cli.params {
         let full_param: Vec<&str> = param.split("=").collect();
         match full_param[0] {
-            "user"  => {
+            "info-user"     => {
                 let uid: u32 = full_param[1].parse().unwrap();
                 let user = cli.get_user(uid).await?;
                 println!("{:?}", &user);
             },
-            "token" => {
+            "isonlive-user" => {
+                let uid: u32 = full_param[1].parse().unwrap();
+                let stream = cli.get_stream_user(uid).await?;
+                println!("{:?}", &stream);
+            },
+            "token"         => {
                 let token = cli.get_token().await?;
                 println!("{}", &token);
             },
-            "help"  => {
+            "uid"           => {
+                let login: String = full_param[1].parse().unwrap();
+                let mut user: Vec<User> = cli.get_uid(login).await?;
+                let uid: &mut User = user.first_mut().unwrap();
+                println!("{:?}", &uid.id);
+            },
+            "help"          => {
                 println!("Please, see the readme file for help.");
             },
-            _       => { }
+            _               => { }
         };
     }
 
