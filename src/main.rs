@@ -59,6 +59,7 @@ struct BannedEvents {
     version: String,
     event_data: BannedEventsData,
 }
+// TO DO : optimizing this struct, maybe reducing it to one struct
 #[derive(Debug, Serialize, Deserialize)]
 struct BannedEventsData {
     broadcaster_id: String,
