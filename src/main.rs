@@ -51,13 +51,32 @@ struct TopGames {
     box_art_url: String,
 }
 
+#[derive(Debug)]
+enum TokenOption<T> {
+    Some(T),
+    None,
+}
+
 impl Cli {
-    async fn get_token(&self) -> Result<String, reqwest::Error> {
+    async fn get_token(&self, scopes: TokenOption<Vec<String>>) -> Result<String, reqwest::Error> {
         let client = reqwest::Client::new();
-        let resp = client.post(format!("https://id.twitch.tv/oauth2/token?client_id={}&client_secret={}&grant_type=client_credentials", self.twitch_client_id, self.twitch_client_secret).as_str())
-            .send().await?;
-        let text = resp.text().await?;
-        Ok(text)
+        match &scopes {
+            TokenOption::None => {
+                println!("No scopes given");
+                let resp = client.post(format!("https://id.twitch.tv/oauth2/token?client_id={}&client_secret={}&grant_type=client_credentials", 
+                    self.twitch_client_id, self.twitch_client_secret).as_str())
+                    .send().await?;
+                let text = resp.text().await?;
+                Ok(text)
+            }
+            TokenOption::Some(t) => {
+                println!("Scopes given: {:?}", t);
+                let resp = client.post(format!("https://id.twitch.tv/oauth2/token?client_id={}&client_secret={}&grant_type=client_credentials&scope={}", 
+                    self.twitch_client_id, self.twitch_client_secret, t.join(" ")).as_str()).send().await?;
+                let text = resp.text().await?;
+                Ok(text)
+            }
+        }
     }
     fn remove_data_scope(&self, text: &str) -> Result<String, serde_json::Error> {
         let deserialized: serde_json::Value = serde_json::from_str(&text).unwrap();
@@ -134,24 +153,43 @@ async fn main() -> Result<(), reqwest::Error> {
         let full_param: Vec<&str> = param.split("=").collect();
         match full_param[0] {
             "info-user" => {
-                let uid: u32 = full_param[1].parse().unwrap();
-                let user = cli.get_user(uid).await?;
-                println!("{:?}", &user);
+                if full_param.len() == 2usize {
+                    let uid: u32 = full_param[1].parse().unwrap();
+                    let user = cli.get_user(uid).await?;
+                    println!("{:?}", &user);
+                } else {
+                    println!("Please, give userid like this : info-user=5555469");
+                }
             }
             "isonlive-user" => {
-                let uid: u32 = full_param[1].parse().unwrap();
-                let stream = cli.get_stream_user(uid).await?;
-                println!("{:?}", &stream);
+                if full_param.len() == 2usize {
+                    let uid: u32 = full_param[1].parse().unwrap();
+                    let stream = cli.get_stream_user(uid).await?;
+                    println!("{:?}", &stream);
+                } else {
+                    println!("Please, give userid like this : isonlive-user=5555469");
+                }
             }
             "token" => {
-                let token = cli.get_token().await?;
-                println!("{}", &token);
+                if full_param.len() == 1usize {
+                    let token = cli.get_token(TokenOption::None).await?;
+                    println!("{}", &token);
+                } else if full_param.len() == 2usize {
+                    let scopes: Vec<String> =
+                        full_param[1].split(",").map(|i| i.to_string()).collect();
+                    let token = cli.get_token(TokenOption::Some(scopes)).await?;
+                    println!("{}", &token);
+                }
             }
             "uid" => {
-                let login: String = full_param[1].parse().unwrap();
-                let user: Vec<User> = cli.get_user_by_login(login).await?;
-                let uid: &User = user.first().unwrap();
-                println!("{:?}", &uid.id);
+                if full_param.len() == 2usize {
+                    let login: String = full_param[1].parse().unwrap();
+                    let user: Vec<User> = cli.get_user_by_login(login).await?;
+                    let uid: &User = user.first().unwrap();
+                    println!("{}", &uid.id);
+                } else {
+                    println!("Please, give login name like this : uid=zaekof");
+                }
             }
             "topgames" => {
                 let top_games = cli.get_top_games().await?;

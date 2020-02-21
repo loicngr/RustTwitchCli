@@ -8,8 +8,9 @@
     TWITCH_CLIENT_SECRET=
     TWITCH_CLIENT_TOKEN=
 
-### Generate Token
+### Generate Token (Scope is not optional)
 
+- > cargo run token=moderation:read,clips:edit
 - > cargo run token
 
 ### Get User by id
