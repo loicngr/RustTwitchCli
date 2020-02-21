@@ -51,6 +51,23 @@ struct TopGames {
     box_art_url: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct BannedEvents {
+    id: String,
+    event_type: String,
+    event_timestamp: String,
+    version: String,
+    event_data: BannedEventsData,
+}
+#[derive(Debug, Serialize, Deserialize)]
+struct BannedEventsData {
+    broadcaster_id: String,
+    broadcaster_name: String,
+    user_id: String,
+    user_name: String,
+    expires_at: String,
+}
+
 #[derive(Debug)]
 enum TokenOption<T> {
     Some(T),
@@ -132,6 +149,34 @@ impl Cli {
         let top_games: Vec<TopGames> = serde_json::from_str(&data).unwrap();
         Ok(top_games)
     }
+    async fn get_banned_events(&self, bid: u32) -> Result<Vec<BannedEvents>, reqwest::Error> {
+        let client = reqwest::Client::new();
+        let resp = client
+            .get(
+                format!(
+                    "https://api.twitch.tv/helix/moderation/banned/events?broadcaster_id={}",
+                    &bid
+                )
+                .as_str(),
+            )
+            .bearer_auth(self.twitch_client_token.as_str())
+            .send()
+            .await?;
+        let text = resp.text().await?;
+        let deserialized_resp: serde_json::Value = serde_json::from_str(&text).unwrap();
+        match deserialized_resp.get("status") {
+            None => panic!("error request, maybe no right to make this request ?"),
+            Some(nbr) => {
+                if nbr.as_u64().unwrap() != 401u64 {
+                    let data = self.remove_data_scope(&text.as_str()).unwrap();
+                    let banned_events: Vec<BannedEvents> = serde_json::from_str(&data).unwrap();
+                    Ok(banned_events)
+                } else {
+                    panic!("{}", deserialized_resp)
+                }
+            }
+        }
+    }
 }
 
 #[tokio::main]
@@ -199,6 +244,15 @@ async fn main() -> Result<(), reqwest::Error> {
                 let top_games = cli.get_top_games().await?;
                 let first_game: &TopGames = &top_games.first().unwrap();
                 println!("{:?}", first_game);
+            }
+            "bannedevents" => {
+                if full_param.len() == 2usize {
+                    let bid: u32 = full_param[1].parse().unwrap();
+                    let banned_events: Vec<BannedEvents> = cli.get_banned_events(bid).await?;
+                    println!("{:?}", &banned_events);
+                } else {
+                    println!("Please, give broadcaster id like this : bannedevents=198704263");
+                }
             }
             "help" => {
                 println!("Please, see the readme file for help.");
