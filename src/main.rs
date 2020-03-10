@@ -102,7 +102,7 @@ impl Cli {
         let serialized = serde_json::to_string(&data).unwrap();
         Ok(serialized)
     }
-    async fn get_stream_user(&self, uid: u32) -> Result<Vec<Stream>, reqwest::Error> {
+    async fn get_stream_user(&self, uid: u32) -> Result<serde_json::Value, reqwest::Error> {
         let client = reqwest::Client::new();
         let resp = client
             .get(format!("https://api.twitch.tv/helix/streams?user_id={}", &uid).as_str())
@@ -110,11 +110,10 @@ impl Cli {
             .send()
             .await?;
         let text = resp.text().await?;
-        let data = self.remove_data_scope(&text.as_str()).unwrap();
-        let stream: Vec<Stream> = serde_json::from_str(&data).unwrap();
+        let stream: serde_json::Value = serde_json::from_str(&text).unwrap();
         Ok(stream)
     }
-    async fn get_user_by_login(&self, login: String) -> Result<Vec<User>, reqwest::Error> {
+    async fn get_user_by_login(&self, login: String) -> Result<serde_json::Value, reqwest::Error> {
         let client = reqwest::Client::new();
         let resp = client
             .get(format!("https://api.twitch.tv/helix/users?login={}", &login).as_str())
@@ -122,11 +121,10 @@ impl Cli {
             .send()
             .await?;
         let text = resp.text().await?;
-        let data = self.remove_data_scope(&text.as_str()).unwrap();
-        let user: Vec<User> = serde_json::from_str(&data).unwrap();
+        let user: serde_json::Value = serde_json::from_str(&text).unwrap();
         Ok(user)
     }
-    async fn get_user(&self, uid: u32) -> Result<Vec<User>, reqwest::Error> {
+    async fn get_user(&self, uid: u32) -> Result<serde_json::Value, reqwest::Error> {
         let client = reqwest::Client::new();
         let resp = client
             .get(format!("https://api.twitch.tv/helix/users?id={}", &uid).as_str())
@@ -134,8 +132,7 @@ impl Cli {
             .send()
             .await?;
         let text = resp.text().await?;
-        let data = self.remove_data_scope(&text.as_str()).unwrap();
-        let user: Vec<User> = serde_json::from_str(&data).unwrap();
+        let user: serde_json::Value = serde_json::from_str(&text).unwrap();
         Ok(user)
     }
     async fn get_top_games(&self) -> Result<Vec<TopGames>, reqwest::Error> {
@@ -202,7 +199,8 @@ async fn main() -> Result<(), reqwest::Error> {
                 if full_param.len() == 2usize {
                     let uid: u32 = full_param[1].parse().unwrap();
                     let user = cli.get_user(uid).await?;
-                    println!("{:?}", &user);
+
+                    println!("{}", user);
                 } else {
                     println!("Please, give userid like this : info-user=5555469");
                 }
@@ -211,7 +209,8 @@ async fn main() -> Result<(), reqwest::Error> {
                 if full_param.len() == 2usize {
                     let uid: u32 = full_param[1].parse().unwrap();
                     let stream = cli.get_stream_user(uid).await?;
-                    println!("{:?}", &stream);
+
+                    println!("{}", stream);
                 } else {
                     println!("Please, give userid like this : isonlive-user=5555469");
                 }
@@ -230,9 +229,9 @@ async fn main() -> Result<(), reqwest::Error> {
             "uid" => {
                 if full_param.len() == 2usize {
                     let login: String = full_param[1].parse().unwrap();
-                    let user: Vec<User> = cli.get_user_by_login(login).await?;
-                    let uid: &User = user.first().unwrap();
-                    println!("{}", &uid.id);
+                    let user = cli.get_user_by_login(login).await?;
+                    
+                    println!("{}", user["data"][0]["id"]);
                 } else {
                     println!("Please, give login name like this : uid=zaekof");
                 }
