@@ -32,3 +32,6 @@
 ### Get Top Game
 
 - > cargo run topgame
+
+### Windows Build
+- > cargo build --release --target=x86_64-pc-windows-msvc
