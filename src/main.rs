@@ -109,7 +109,10 @@ impl Cli {
             .header("Client-ID", self.twitch_client_id.as_str())
             .send()
             .await?;
-        let text = resp.text().await?;
+        let mut text = resp.text().await?;
+        if text.len() < 27 {
+            text = String::from("{\"data\":[],\"pagination\":{}}");
+        }
         let stream: serde_json::Value = serde_json::from_str(&text).unwrap();
         Ok(stream)
     }
